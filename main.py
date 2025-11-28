@@ -38,13 +38,6 @@ def predict_house_price_simple(features):
 
 class Input(BaseModel):
     data: Optional[List[float]] = [8.3252, 41.0, 6.98, 1.02, 322, 2.55, 37.88, -122.23]
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "data": [8.3252, 41.0, 6.98, 1.02, 322, 2.55, 37.88, -122.23]
-            }
-        }
 
 @app.get("/")
 def read_root():
