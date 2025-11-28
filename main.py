@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional, List
-import gradio as gr
 import uvicorn
 import os
 import numpy as np
@@ -44,7 +43,12 @@ def read_root():
     return {
         "message": "House Price Prediction API", 
         "status": "running",
-        "model": "Simple Linear Regression (no scikit-learn dependency)"
+        "model": "Simple Linear Regression",
+        "endpoints": {
+            "predict": "/predict (POST)",
+            "docs": "/docs",
+            "ui": "/ui"
+        }
     }
 
 @app.post("/predict")
@@ -56,57 +60,125 @@ def predict(input: Input = Input()):
         
         return {
             "prediction": float(prediction),
+            "prediction_formatted": f"${prediction:,.2f}",
             "input_features": input.data,
             "feature_names": FEATURE_NAMES
         }
     except Exception as e:
         return {"error": str(e)}
 
-# Gradio interface function
-def predict_house_price(median_income, house_age, avg_rooms, avg_bedrooms, 
-                       population, avg_occupancy, latitude, longitude):
-    try:
-        features = [median_income, house_age, avg_rooms, avg_bedrooms, 
-                   population, avg_occupancy, latitude, longitude]
-        prediction = predict_house_price_simple(features)
-        
-        if prediction is None:
-            return "Prediction failed"
-        
-        return f"${prediction:,.2f}"
-    except Exception as e:
-        return f"Error: {str(e)}"
+@app.get("/ui")
+def get_ui():
+    """Simple HTML UI for testing the prediction"""
+    html_content = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>House Price Predictor</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .form-group { margin-bottom: 15px; }
+            label { display: block; margin-bottom: 5px; }
+            input { width: 100%; padding: 8px; margin-bottom: 5px; }
+            button { background: #007bff; color: white; padding: 10px 20px; border: none; cursor: pointer; }
+            .result { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🏠 House Price Predictor</h1>
+            <p>Enter housing features to predict the median house value.</p>
+            
+            <form id="predictionForm">
+                <div class="form-group">
+                    <label>Median Income:</label>
+                    <input type="number" step="0.0001" value="8.3252" name="medInc">
+                </div>
+                <div class="form-group">
+                    <label>House Age:</label>
+                    <input type="number" step="0.01" value="41.0" name="houseAge">
+                </div>
+                <div class="form-group">
+                    <label>Average Rooms:</label>
+                    <input type="number" step="0.01" value="6.98" name="aveRooms">
+                </div>
+                <div class="form-group">
+                    <label>Average Bedrooms:</label>
+                    <input type="number" step="0.01" value="1.02" name="aveBedrms">
+                </div>
+                <div class="form-group">
+                    <label>Population:</label>
+                    <input type="number" step="1" value="322" name="population">
+                </div>
+                <div class="form-group">
+                    <label>Average Occupancy:</label>
+                    <input type="number" step="0.01" value="2.55" name="aveOccup">
+                </div>
+                <div class="form-group">
+                    <label>Latitude:</label>
+                    <input type="number" step="0.01" value="37.88" name="latitude">
+                </div>
+                <div class="form-group">
+                    <label>Longitude:</label>
+                    <input type="number" step="0.01" value="-122.23" name="longitude">
+                </div>
+                <button type="submit">Predict Price</button>
+            </form>
+            
+            <div id="result" class="result" style="display:none;">
+                <h3>Prediction Result:</h3>
+                <p id="predictionText"></p>
+            </div>
+        </div>
 
-# Create Gradio interface
-def create_gradio_interface():
-    interface = gr.Interface(
-        fn=predict_house_price,
-        inputs=[
-            gr.Number(value=8.3252, label="Median Income"),
-            gr.Number(value=41.0, label="House Age"),
-            gr.Number(value=6.98, label="Average Rooms"),
-            gr.Number(value=1.02, label="Average Bedrooms"),
-            gr.Number(value=322, label="Population"),
-            gr.Number(value=2.55, label="Average Occupancy"),
-            gr.Number(value=37.88, label="Latitude"),
-            gr.Number(value=-122.23, label="Longitude")
-        ],
-        outputs=gr.Textbox(label="Predicted House Price"),
-        title="🏠 House Price Predictor (Simplified)",
-        description="Enter housing features to predict median house value. Uses pre-trained linear model coefficients.",
-        examples=[
-            [8.3252, 41.0, 6.98, 1.02, 322, 2.55, 37.88, -122.23],
-            [8.3014, 21.0, 6.24, 0.97, 2401, 2.11, 37.86, -122.22],
-            [7.2574, 52.0, 8.29, 1.07, 496, 2.80, 37.85, -122.24]
-        ]
-    )
-    return interface
+        <script>
+            document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const form = e.target;
+                const data = [
+                    parseFloat(form.medInc.value),
+                    parseFloat(form.houseAge.value),
+                    parseFloat(form.aveRooms.value),
+                    parseFloat(form.aveBedrms.value),
+                    parseFloat(form.population.value),
+                    parseFloat(form.aveOccup.value),
+                    parseFloat(form.latitude.value),
+                    parseFloat(form.longitude.value)
+                ];
 
-# Mount Gradio app
-gradio_app = create_gradio_interface()
-
-# Mount Gradio app to FastAPI
-app = gr.mount_gradio_app(app, gradio_app, path="/gradio")
+                try {
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ data })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.error) {
+                        document.getElementById('predictionText').innerHTML = `Error: ${result.error}`;
+                    } else {
+                        document.getElementById('predictionText').innerHTML = 
+                            `<strong>${result.prediction_formatted}</strong><br>
+                             <small>Raw value: ${result.prediction}</small>`;
+                    }
+                    
+                    document.getElementById('result').style.display = 'block';
+                } catch (error) {
+                    document.getElementById('predictionText').innerHTML = `Error: ${error.message}`;
+                    document.getElementById('result').style.display = 'block';
+                }
+            });
+        </script>
+    </body>
+    </html>
+    """
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(content=html_content)
 
 if __name__ == "__main__":
     # Run FastAPI server
