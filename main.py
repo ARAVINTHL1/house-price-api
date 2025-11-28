@@ -1,9 +1,8 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 import joblib
 import gradio as gr
-import threading
 import uvicorn
 import os
 
@@ -17,7 +16,7 @@ except FileNotFoundError:
     model = None
 
 class Input(BaseModel):
-    data: Optional[list] = [8.3252, 41.0, 6.98, 1.02, 322, 2.55, 37.88, -122.23]
+    data: Optional[List[float]] = [8.3252, 41.0, 6.98, 1.02, 322, 2.55, 37.88, -122.23]
 
 @app.get("/")
 def read_root():
