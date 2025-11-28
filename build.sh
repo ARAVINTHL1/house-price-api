@@ -1,4 +1,4 @@
 #!/bin/bash
 # Build script for Render deployment
-pip install --upgrade pip
-pip install --only-binary=all -r requirements.txt
+pip install --upgrade pip wheel setuptools
+pip install -r requirements.txt
