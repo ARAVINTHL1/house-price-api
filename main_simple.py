@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional, List
+import joblib
 import gradio as gr
 import uvicorn
 import os
@@ -21,6 +22,9 @@ FEATURE_NAMES = [
     'Population', 'AveOccup', 'Latitude', 'Longitude'
 ]
 
+class Input(BaseModel):
+    data: Optional[List[float]] = [8.3252, 41.0, 6.98, 1.02, 322, 2.55, 37.88, -122.23]
+
 def predict_house_price_simple(features):
     """Simple linear prediction without scikit-learn dependency"""
     try:
@@ -35,9 +39,6 @@ def predict_house_price_simple(features):
         return prediction * 100000
     except Exception as e:
         return None
-
-class Input(BaseModel):
-    data: Optional[List[float]] = [8.3252, 41.0, 6.98, 1.02, 322, 2.55, 37.88, -122.23]
 
 @app.get("/")
 def read_root():
@@ -63,8 +64,8 @@ def predict(input: Input = Input()):
         return {"error": str(e)}
 
 # Gradio interface function
-def predict_house_price(median_income, house_age, avg_rooms, avg_bedrooms, 
-                       population, avg_occupancy, latitude, longitude):
+def predict_house_price_gradio(median_income, house_age, avg_rooms, avg_bedrooms, 
+                              population, avg_occupancy, latitude, longitude):
     try:
         features = [median_income, house_age, avg_rooms, avg_bedrooms, 
                    population, avg_occupancy, latitude, longitude]
@@ -80,7 +81,7 @@ def predict_house_price(median_income, house_age, avg_rooms, avg_bedrooms,
 # Create Gradio interface
 def create_gradio_interface():
     interface = gr.Interface(
-        fn=predict_house_price,
+        fn=predict_house_price_gradio,
         inputs=[
             gr.Number(value=8.3252, label="Median Income"),
             gr.Number(value=41.0, label="House Age"),
