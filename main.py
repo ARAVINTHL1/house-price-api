@@ -5,6 +5,7 @@ import joblib
 import gradio as gr
 import threading
 import uvicorn
+import os
 
 app = FastAPI(title="House Price Prediction API", version="1.0.0")
 
@@ -80,4 +81,5 @@ app = gr.mount_gradio_app(app, gradio_app, path="/gradio")
 
 if __name__ == "__main__":
     # Run FastAPI server
-    uvicorn.run("main:app", host="0.0.0.0", port=10000, reload=True)
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
